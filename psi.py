@@ -1,11 +1,12 @@
 import numpy as np
 
-def calculate_psi(expected, actual, buckets=10, axis=0):
+def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
     '''Calculate the PSI (population stability index) across all variables
     
     Args:
        expected: numpy matrix of original values
-       actual: numpy matrix of new values, same size as expected 
+       actual: numpy matrix of new values, same size as expected
+       buckettype: type of strategy for creating buckets, bins splits into even splits, quantiles splits into quantile buckets
        buckets: number of quantiles to use in bucketing variables
        axis: axis by which variables are defined, 0 for vertical, 1 for horizontal 
        
@@ -30,19 +31,29 @@ def calculate_psi(expected, actual, buckets=10, axis=0):
            psi_value: calculated PSI value
         '''
         
-        breakpoints = np.arange(0, buckets + 1) / (buckets) * 100
-        quantiles = np.stack([np.percentile(expected_array, b) for b in breakpoints])
+        def scale_range (input, min, max):
+            input += -(np.min(input))
+            input /= np.max(input) / (max - min)
+            input += min
+            return input
         
+        
+        breakpoints = np.arange(0, buckets + 1) / (buckets) * 100
+        
+        if buckettype == 'bins':
+            breakpoints = scale_range(breakpoints, np.min(expected_array), np.max(expected_array))
+        elif buckettype == 'quantiles':
+            breakpoints = np.stack([np.percentile(expected_array, b) for b in breakpoints])
     
-        def generate_counts(arr, quantiles):
-            '''Generates counts for each bucket by using the quantile values 
+        def generate_counts(arr, breakpoints):
+            '''Generates counts for each bucket by using the bucket values 
             
             Args:
                arr: ndarray of actual values
-               quantiles: list of quantile values
+               breakpoints: list of bucket values
             
             Returns:
-               counts: counts for elements in each bucket, length of quantiles array minus one
+               counts: counts for elements in each bucket, length of breakpoints array minus one
             '''
     
             def count_in_range(arr, low, high, start):
@@ -54,16 +65,16 @@ def calculate_psi(expected, actual, buckets=10, axis=0):
                 return(len(np.where(np.logical_and(arr>low, arr<=high))[0]))
         
             
-            counts = np.zeros(len(quantiles)-1)
+            counts = np.zeros(len(breakpoints)-1)
         
-            for i in range(1, len(quantiles)):
-                counts[i-1] = count_in_range(arr, quantiles[i-1], quantiles[i], i==1)
+            for i in range(1, len(breakpoints)):
+                counts[i-1] = count_in_range(arr, breakpoints[i-1], breakpoints[i], i==1)
         
             return(counts)
         
         
-        expected_percents = generate_counts(expected_array, quantiles) / len(expected_array)
-        actual_percents = generate_counts(actual_array, quantiles) / len(actual_array)
+        expected_percents = generate_counts(expected_array, breakpoints) / len(expected_array)
+        actual_percents = generate_counts(actual_array, breakpoints) / len(actual_array)
     
         def sub_psi(e_perc, a_perc):
             '''Calculate the actual PSI value from comparing the values.
