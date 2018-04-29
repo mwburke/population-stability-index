@@ -45,36 +45,10 @@ def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
         elif buckettype == 'quantiles':
             breakpoints = np.stack([np.percentile(expected_array, b) for b in breakpoints])
     
-        def generate_counts(arr, breakpoints):
-            '''Generates counts for each bucket by using the bucket values 
-            
-            Args:
-               arr: ndarray of actual values
-               breakpoints: list of bucket values
-            
-            Returns:
-               counts: counts for elements in each bucket, length of breakpoints array minus one
-            '''
-    
-            def count_in_range(arr, low, high, start):
-                '''Counts elements in array between low and high values.
-                   Includes value if start is true
-                '''
-                if start:
-                    return(len(np.where(np.logical_and(arr>=low, arr<=high))[0]))
-                return(len(np.where(np.logical_and(arr>low, arr<=high))[0]))
-        
-            
-            counts = np.zeros(len(breakpoints)-1)
-        
-            for i in range(1, len(breakpoints)):
-                counts[i-1] = count_in_range(arr, breakpoints[i-1], breakpoints[i], i==1)
-        
-            return(counts)
         
         
-        expected_percents = generate_counts(expected_array, breakpoints) / len(expected_array)
-        actual_percents = generate_counts(actual_array, breakpoints) / len(actual_array)
+        expected_percents = np.histogram(expected_array, breakpoints)[0] / len(expected_array)
+        actual_percents = np.histogram(actual_array, breakpoints)[0] / len(actual_array)
     
         def sub_psi(e_perc, a_perc):
             '''Calculate the actual PSI value from comparing the values.
