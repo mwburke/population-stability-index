@@ -5,7 +5,7 @@ def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
 
     Args:
        expected: numpy matrix of original values
-       actual: numpy matrix of new values, same size as expected
+       actual: numpy matrix of new values
        buckettype: type of strategy for creating buckets, bins splits into even splits, quantiles splits into quantile buckets
        buckets: number of quantiles to use in bucketing variables
        axis: axis by which variables are defined, 0 for vertical, 1 for horizontal
@@ -16,7 +16,7 @@ def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
     Author:
        Matthew Burke
        github.com/mwburke
-       worksofchart.com
+       mwburke.github.io.com
     '''
 
     def psi(expected_array, actual_array, buckets):
@@ -37,7 +37,6 @@ def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
             input += min
             return input
 
-
         breakpoints = np.arange(0, buckets + 1) / (buckets) * 100
 
         if buckettype == 'bins':
@@ -45,10 +44,8 @@ def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
         elif buckettype == 'quantiles':
             breakpoints = np.stack([np.percentile(expected_array, b) for b in breakpoints])
 
-
-
-        expected_percents = np.histogram(expected_array, breakpoints)[0] / len(expected_array)
-        actual_percents = np.histogram(actual_array, breakpoints)[0] / len(actual_array)
+        expected_fractions = np.histogram(expected_array, breakpoints)[0] / len(expected_array)
+        actual_fractions = np.histogram(actual_array, breakpoints)[0] / len(actual_array)
 
         def sub_psi(e_perc, a_perc):
             '''Calculate the actual PSI value from comparing the values.
@@ -62,14 +59,14 @@ def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
             value = (e_perc - a_perc) * np.log(e_perc / a_perc)
             return(value)
 
-        psi_value = np.sum(sub_psi(expected_percents[i], actual_percents[i]) for i in range(0, len(expected_percents)))
+        psi_value = sum(sub_psi(expected_fractions[i], actual_fractions[i]) for i in range(0, len(expected_fractions)))
 
         return(psi_value)
 
     if len(expected.shape) == 1:
         psi_values = np.empty(len(expected.shape))
     else:
-        psi_values = np.empty(expected.shape[axis])
+        psi_values = np.empty(expected.shape[1 - axis])
 
     for i in range(0, len(psi_values)):
         if len(psi_values) == 1:
